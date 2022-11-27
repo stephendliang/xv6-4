@@ -524,6 +524,8 @@ procdump(void)
   200 -> 500, n
 
 */
+  static char *writable_str[] = {"no","yes"};
+  int physical, writable, used = 0;
 
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->state == UNUSED)
@@ -535,15 +537,20 @@ procdump(void)
     
     cprintf("%d %s %s", p->pid, state, p->name);
 
-    for (i=0;i<pages;++i) {
-      printf("%d -> %d, %c", );
-    }
-
 
     if(p->state == SLEEPING){
       getcallerpcs((uint*)p->context->ebp+2, pc);
+      
       for(i=0; i<10 && pc[i] != 0; i++)
         cprintf(" %p", pc[i]);
+      
+      for (i=0;i<p->sz;i+=PGSIZE) {
+        physical = PTE_ADDR(p->pgdir);
+        writable = p->pgdir[i / PGSIZE] & PTE_W;
+
+        cprintf("\n%d -> %d, %s", i, physical, writable_str[writable >> 1]);
+      }
+
     }
     cprintf("\n");
   }
