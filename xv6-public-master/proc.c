@@ -525,7 +525,7 @@ procdump(void)
 
 */
   static char *writable_str[] = {"no","yes"};
-  int physical, writable, used = 0;
+  int physical, writable = 0;
 
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->state == UNUSED)
