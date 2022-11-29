@@ -370,6 +370,7 @@ uva2ka(pde_t *pgdir, char *uva)
 // Copy len bytes from p to user address va in page table pgdir.
 // Most useful when pgdir is not the current page table.
 // uva2ka ensures this only works for PTE_U pages.
+/*
 int
 copyout(pde_t *pgdir, uint va, void *p, uint len)
 {
@@ -392,22 +393,23 @@ copyout(pde_t *pgdir, uint va, void *p, uint len)
   }
   return 0;
 }
+*/
 
 // Copy from kernel to user.
 // Copy len bytes from src to virtual address dstva in a given page table.
 // Return 0 on success, -1 on error.
 int
-copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
+copyout(pde_t *pgdir, uint va, void *p, uint len)
 {
   uint64 n, va0, pa0;
   while(len > 0){
-    va0 = PGROUNDDOWN(dstva);
+    va0 = PGROUNDDOWN(va);
     if(va0 >= MAXVA) {
       return -1;
     }
 
     pte_t *pte;
-    pte = walk(pagetable, va0, 0);
+    pte = walkpgdir(pgdir, (void*)va0, 0);
     if (pte == 0) return -1;
 
     if ((*pte & PTE_V) == 0) return -1;
@@ -428,6 +430,7 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
       panic(“sometthing is wrong in mappages in trap.\n”);
     }
   }
+}
 
 //PAGEBREAK!
 // Blank page.
@@ -436,95 +439,16 @@ copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 //PAGEBREAK!
 // Blank page.
 // COW trap handling
-void COW_handle_pgfault(uint err_code)
-{ 
-
-    uint va = rcr2();       // get va
-
-  //errors taken care of
-  if(myproc() == 0)     // null process
-  { 
-      cprintf("Error in COW_handle_pgfault: No user process from cpu %d, cr2=0x%x\n", cpuid(), va); //va = rcr2()
-      panic("Page_Fault");
-  }
-
-  pte_t *pte;
-
-  pte = walkpgdir(myproc()->pgdir, (void*)va, 0);
-
-  // page has write perm_S enabled
-    if(PTE_W & *pte)
-    {
-        cprintf("error code: %x, addr 0x%x\n", err_code, va);
-      
-        panic("Error in COW_handle_pgfault: Already writeable");
-    }
-
-  if( pte == 0  || !(*pte) || va >= KERNBASE || !PTE_U || ! PTE_P )
-  { 
-      myproc()->killed = 1;
-      cprintf("Error in COW_handle_pgfault: Illegal (virtual) addr on cpu %d address 0x%x, killing proc %s id (pid) %d\n", cpuid(), va, myproc()->name, myproc()->pid);
-
-      return;
-  }
-
-    uint pa = PTE_ADDR(*pte);                     //get physical addr
-    uint refC = get_refC(pa);                // get ref. count of curr. page
-
-    if(refC < 1)
-    {
-        panic("Error in COW_handle_pgfault: Incorrect Reference Count");
-    }
-
-    else if(refC == 1)
-    {
-        *pte = PTE_W | *pte;   // writable now since alone 
-        
-        //flush tlb because PTEs changed
-        lcr3(V2P(myproc()->pgdir));
-        return;
-    }
-
-    else                       //refC > 1
-    {
-        //try for new page
-        char* mem = kalloc();
-
-        if(mem != 0)  // page available
-        {   
-          memmove(mem, (char*)P2V(pa), PGSIZE); // from line 387
-
-          // new PTE to new page
-          *pte =  PTE_U | PTE_W | PTE_P | V2P(mem);
-
-          decrement_refC(pa);
-
-          //flush tlb because PTEs changed
-          lcr3(V2P(myproc()->pgdir));
-          return;
-        }
-
-        myproc()->killed = 1;
-
-        cprintf("Error in COW_handle_pgfault: Out of memory, kill proc %s with pid %d\n", myproc()->name, myproc()->pid);          
-        return;
-
-    }
-
-    //flush tlb because PTEs changed
-    lcr3(V2P(myproc()->pgdir));
-}
-
 
 void pagefault(uint err_code)
 {
     // 1- Get cr2 address
-    uint va = rcr2(), pa = 0, refCount = 0;
+    uint va = rcr2(), pa = 0, rfc = 0;
     pte_t *pte;
 
     // 2- Check if the address found by rcr2() method is not 0.
     if (va == 0) {
-
+      panic("pagefault");
     }
 
     // 3- Find page table entry (PTE) —> hint: use walkpgdir method
@@ -536,49 +460,47 @@ void pagefault(uint err_code)
       return;
     }
 
+    // 4-If pte is not shared —> give panic error
+    if (!(*pte & PTE_S)) {
+      proc->killed = 1;
+      return;
+    }
+
+    // 5-If pte is not present —> give panic error
     if (!(*pte & PTE_P) || !(*pte & PTE_U)) {
       proc->killed = 1;
       return;
-
     }
 
-    // Current page has write permissions enabled
-    if(*pte & PTE_W ){
+    if(*pte & PTE_W) {
       cprintf("error code: %x, addr 0x%x\n", err_code, va);
       panic("Page fault already writeable");
     }
 
 
-
+    // 6-Find physical address(pa) and 20-bit physical page number (ppn)
     // get the physical address from the  given page table entry
     pa = PTE_ADDR(*pte);
     // get the reference count of the current page
-    refCount = get_refC(pa);
+    rfc = get_refC(pa);
     char *mem;
 
 
-
-    // Current process is the first one that tries to write to this page
-    if(refCount > 1) {
-        // allocate a new memory page for the process
+    //7- Check if the table is shared or not
+    if(rfc > 1) {
         if((mem = kalloc()) == 0) {
           cprintf("Page fault out of memory, kill proc %s with pid %d\n", proc->name, proc->pid);
           proc->killed = 1;
           return;
         }
-        // copy the contents from the original memory page pointed the virtual address
+
         memmove(mem, (char*)P2V(pa), PGSIZE);
-        // point the given page table entry to the new page
         *pte = V2P(mem) | PTE_P | PTE_U | PTE_W;
 
-        // Since the current process now doesn't point to original page,
-        // decrement the reference count by 1
-        decrementReferenceCount(pa);
-    } else if(refCount == 1){
-      // remove the read-only restriction on the trapping page
+        decrease_ref(pa);
+    } else if(rfc == 1){
       *pte |= PTE_W;
-    }
-    else{
+    } else{
       panic("pagefault reference count wrong\n");
     }
 
