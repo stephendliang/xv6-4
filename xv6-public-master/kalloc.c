@@ -9,6 +9,8 @@
 #include "mmu.h"
 #include "spinlock.h"
 
+#define pageindex(x) (x >> PGSHIFT)
+
 void freerange(void *vstart, void *vend);
 extern char end[]; // first address after kernel loaded from ELF file
                    // defined by the kernel linker script in kernel.ld
@@ -21,6 +23,8 @@ struct {
   struct spinlock lock;
   int use_lock;
   struct run *freelist;
+
+  int refcounts[PHYSTOP];
 } kmem;
 
 // Initialization happens in two phases.
@@ -93,4 +97,127 @@ kalloc(void)
     release(&kmem.lock);
   return (char*)r;
 }
+
+
+
+
+
+void increment_refC(uint pa)
+{
+  if(pa >= PHYSTOP || pa < (uint)V2P(end))
+    panic("incrementReferenceCount"); 
+
+  acquire(&kmem.lock);
+
+  kmem.page_refC[pa >> PGSHIFT] = kmem.page_refC[pa >> PGSHIFT] + 1;
+
+  release(&kmem.lock);
+
+}
+
+uint 
+num_of_FreePages(void)
+{
+  acquire(&kmem.lock);
+
+  uint num_free_pages = kmem.num_free_pages;
+  
+  release(&kmem.lock);
+  
+  return num_free_pages;
+}
+
+void decrement_refC(uint pa)
+{
+  if(pa >= PHYSTOP || pa < (uint)V2P(end))
+    panic("decrementReferenceCount"); 
+
+  acquire(&kmem.lock);
+
+  kmem.page_refC[pa >> PGSHIFT] = kmem.page_refC[pa >> PGSHIFT] - 1;
+  
+  release(&kmem.lock);
+
+}
+
+uint get_refC(uint pa)
+{
+  if( pa >= PHYSTOP || pa < (uint)V2P(end))
+    panic("getReferenceCount"); 
+
+  uint count;
+
+  acquire(&kmem.lock);
+
+  count = kmem.page_refC[pa >> PGSHIFT];
+  
+  release(&kmem.lock);
+
+  return count;
+
+} 
+
+
+
+
+void
+increase_ref(void* pa)
+{
+    acquire(&kmem.lock);
+    int idx = pageindex(pa);
+    if(idx < 0 || idx >= 1 << 15) {
+        release(&kmem.lock);
+        return;
+    }
+    kmem.refcount[idx]++;
+
+    if (kmem.refcount[idx] == 1)
+        kmem.refcount[idx]++;
+
+    release(&kmem.lock);
+}
+
+int 
+decrease_ref(void* pa)
+{
+    acquire(&kmem.lock);
+    int idx = pageindex(pa);
+    if(idx < 0 || idx >= 1 << 15) {
+        release(&kmem.lock);
+        return 0;
+    }
+    --kmem.refcount[idx];
+    int count = kmem.refcount[idx];
+    release(&kmem.lock);
+    return count;
+}
+
+
+
+
+/*
+
+void add_ref(void *pa) {
+  int index = get_ref_index(pa);
+  if (index == -1) {
+    return;
+  }
+  refc[index] = refc[index] + 1;
+}
+
+void dec_ref(void *pa) {
+  int index = get_ref_index(pa);
+  if (index == -1) {
+    return;
+  }
+  int cur_count = refc[index];
+  if (cur_count <= 0) {
+    panic(“def a freed page!”);
+  }
+  refc[index] = cur_count - 1;
+  if (refc[index] == 0) {
+    // we need to free page
+    kfree(pa);
+  }
+}*/
 
