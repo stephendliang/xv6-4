@@ -218,7 +218,7 @@ growproc(int n)
   release(&ptable.lock);
 
   return pid;*/
-  
+
 int
 fork(void)
 {
@@ -567,7 +567,7 @@ procdump(void)
 
 */
   static char *writable_str[] = {"no","yes"};
-  int physical, writable = 0;
+  uint physical, writable = 0;
 
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
     if(p->state == UNUSED)
@@ -585,15 +585,20 @@ procdump(void)
       
       for(i=0; i<10 && pc[i] != 0; i++)
         cprintf(" %p", pc[i]);
-      
-      for (i=0;i<p->sz;i+=PGSIZE) {
-        physical = PTE_ADDR(p->pgdir);
-        writable = p->pgdir[i / PGSIZE] & PTE_W;
-
-        cprintf("\n%d -> %d, %s", i, physical, writable_str[writable >> 1]);
-      }
-
     }
+
+    pte_t* entry = (pte_t*)P2V(PTE_ADDR(*p->pgdir))
+
+    for (i=0;i<NPTENTRIES;++i) {
+
+      if ((entry[i] & PTE_P) && (entry[i] & PTE_W)) {
+        physical = entry[i] >> 12;
+        writable = entry[i] & PTE_W;
+
+        cprintf("\n%u -> %u, %s", i, physical, writable_str[writable >> 1]);
+      }
+    }
+
     cprintf("\n");
   }
 }
