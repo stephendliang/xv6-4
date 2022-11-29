@@ -7,6 +7,13 @@
 #include "proc.h"
 #include "elf.h"
 
+/*
+struct {
+  struct spinlock lock;
+  unsigned char refct[PHYSTOP >> PTXSHIFT];
+} cow_lock;
+*/
+
 extern char data[];  // defined by kernel.ld
 pde_t *kpgdir;  // for use in scheduler()
 
@@ -343,7 +350,7 @@ copyuvm(pde_t *pgdir, uint sz)
         
         return 0;
     }
-    increment_rc(pa);
+    increase_ref(pa);
   }
 
   lcr3(V2P(pgdir));
@@ -462,12 +469,14 @@ void pagefault(uint err_code)
 
     // 4-If pte is not shared —> give panic error
     if (!(*pte & PTE_S)) {
+      panic("pagefault");
       proc->killed = 1;
       return;
     }
 
     // 5-If pte is not present —> give panic error
     if (!(*pte & PTE_P) || !(*pte & PTE_U)) {
+      panic("pagefault");
       proc->killed = 1;
       return;
     }

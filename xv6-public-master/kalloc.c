@@ -24,7 +24,7 @@ struct {
   int use_lock;
   struct run *freelist;
 
-  unsigned char pg_refcount[PHYSTOP >> PTXSHIFT];
+  unsigned char refct[PHYSTOP >> PTXSHIFT];
 } kmem;
 
 // Initialization happens in two phases.
@@ -53,7 +53,7 @@ freerange(void *vstart, void *vend)
   char *p;
   p = (char*)PGROUNDUP((uint)vstart);
   for(; p + PGSIZE <= (char*)vend; p += PGSIZE){
-    kmem.pg_refcount[V2P(p) >> PTXSHIFT] = 0;
+    kmem.refct[V2P(p) >> PTXSHIFT] = 0;
     kfree(p);
   }
 }
@@ -75,10 +75,10 @@ kfree(char *v)
     acquire(&kmem.lock);
   r = (struct run*)v;
 
-  if(kmem.pg_refcount[V2P(v) >> PTXSHIFT] > 0)         // Decrement the reference count of a page whenever someone frees it
-    --kmem.pg_refcount[V2P(v) >> PTXSHIFT];
+  if(kmem.refct[V2P(v) >> PTXSHIFT] > 0)         // Decrement the reference count of a page whenever someone frees it
+    --kmem.refct[V2P(v) >> PTXSHIFT];
 
-  if(kmem.pg_refcount[V2P(v) >> PTXSHIFT] == 0){       // Free the page only if there are no references to the page
+  if(kmem.refct[V2P(v) >> PTXSHIFT] == 0){       // Free the page only if there are no references to the page
     // Fill with junk to catch dangling refs.
     memset(v, 1, PGSIZE);
     r->next = kmem.freelist;
@@ -100,7 +100,7 @@ kalloc(void)
     acquire(&kmem.lock);
   r = kmem.freelist;
   if(r) {
-    kmem.pg_refcount[V2P((char*)r) >> PTXSHIFT] = 1;     // reference count of a page is set to one when it is allocated
+    kmem.refct[V2P((char*)r) >> PTXSHIFT] = 1;     // reference count of a page is set to one when it is allocated
     kmem.freelist = r->next;
   }
 
