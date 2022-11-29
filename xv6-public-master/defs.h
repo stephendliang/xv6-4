@@ -70,7 +70,7 @@ void            kinit1(void*, void*);
 void            kinit2(void*, void*);
 
 void increase_ref(void *pa);
-uint decrease_ref(void *pa);
+void decrease_ref(void *pa);
 uint get_ref(void* pa);
 
 

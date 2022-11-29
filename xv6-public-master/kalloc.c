@@ -37,7 +37,6 @@ kinit1(void *vstart, void *vend)
 {
   initlock(&kmem.lock, "kmem");
   kmem.use_lock = 0;
-  kmem.free_pages = 0;
   freerange(vstart, vend);
 }
 
@@ -116,33 +115,36 @@ kalloc(void)
 
 void increase_ref(void* pa)
 {
-  if(pa >= PHYSTOP || pa < (uint)V2P(end))
+  uint phys = (uint)pa;
+  if(phys >= PHYSTOP || phys < (uint)V2P(end))
     panic("incrementReferenceCount"); 
 
   acquire(&kmem.lock);
-  kmem.refct[pa >> PTXSHIFT] += 1;
+  kmem.refct[phys >> PTXSHIFT] += 1;
   release(&kmem.lock);
 }
 
 void decrease_ref(void* pa)
 {
-  if(pa >= PHYSTOP || pa < (uint)V2P(end))
+  uint phys = (uint)pa;
+  if(phys >= PHYSTOP || phys < (uint)V2P(end))
     panic("decrementReferenceCount"); 
 
   acquire(&kmem.lock);
-  kmem.refct[pa >> PTXSHIFT] -= 1;
+  kmem.refct[phys >> PTXSHIFT] -= 1;
   release(&kmem.lock);
 }
 
 uint get_ref(void* pa)
 {
-  if( pa >= PHYSTOP || pa < (uint)V2P(end))
+  uint phys = (uint)pa;
+  if(phys >= PHYSTOP || phys < (uint)V2P(end))
     panic("getReferenceCount"); 
 
   uint count;
 
   acquire(&kmem.lock);
-  count = kmem.refct[pa >> PTXSHIFT];
+  count = kmem.refct[phys >> PTXSHIFT];
   release(&kmem.lock);
 
   return count;
