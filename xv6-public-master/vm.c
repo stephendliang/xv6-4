@@ -426,7 +426,7 @@ cowuvm(pde_t *pgdir, uint sz)
   return d;
 
   bad:
-  freeuvm(d);
+  freevm(d);
   return 0;
 }
 
