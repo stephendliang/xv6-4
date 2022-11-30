@@ -90,7 +90,8 @@ sys_uptime(void)
   return xticks;
 }
 
-int sys_procdump(void)
+int
+sys_procdump(void)
 {
   procdump();
   return 0;
