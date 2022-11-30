@@ -456,8 +456,7 @@ void pagefault(uint err_code)
 
     // 3- Find page table entry (PTE) —> hint: use walkpgdir method
     if(va >= KERNBASE || (pte = walkpgdir(myproc()->pgdir, (void*)va, 0)) == 0){
-      cprintf("Illegal virtual address on cpu %d addr 0x%x, kill proc %s with pid %d\n",
-              cpu->apicid, va, myproc()->name, myproc()->pid);
+      panic("pagefault");
       // mark the process as killed
       myproc()->killed = 1;
       return;
