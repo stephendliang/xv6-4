@@ -6,6 +6,7 @@
 #include "mmu.h"
 #include "proc.h"
 #include "elf.h"
+#include "spinlock.h"
 
 struct {
   struct spinlock lock;
@@ -20,9 +21,6 @@ pde_t *kpgdir;  // for use in scheduler()
 void increase_ref(void* pa)
 {
   uint phys = (uint)pa;
-  if(phys >= PHYSTOP || phys < (uint)V2P(end))
-    panic("incrementReferenceCount"); 
-
   acquire(&cow_lock.lock);
   cow_lock.refct[phys >> PTXSHIFT] += 1;
   release(&cow_lock.lock);
@@ -31,9 +29,6 @@ void increase_ref(void* pa)
 void decrease_ref(void* pa)
 {
   uint phys = (uint)pa;
-  if(phys >= PHYSTOP || phys < (uint)V2P(end))
-    panic("decrementReferenceCount"); 
-
   acquire(&cow_lock.lock);
   cow_lock.refct[phys >> PTXSHIFT] -= 1;
   release(&cow_lock.lock);
@@ -42,8 +37,6 @@ void decrease_ref(void* pa)
 uint get_ref(void* pa)
 {
   uint phys = (uint)pa;
-  if(phys >= PHYSTOP || phys < (uint)V2P(end))
-    panic("getReferenceCount"); 
 
   uint count;
 
