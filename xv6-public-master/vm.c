@@ -373,7 +373,6 @@ copyuvm(pde_t *pgdir, uint sz)
       panic("copyuvm: page not present");
 
     *pte = (~ PTE_W) & *pte;  // read only parent page
-    pte |= PTE_S;
 
     flags = PTE_FLAGS(*pte);
     pa = PTE_ADDR(*pte);
@@ -417,10 +416,7 @@ cowuvm(pde_t *pgdir, uint sz)
     pa = PTE_ADDR(*pte);
 
     if(mappages(d, (void*)i, PGSIZE, pa, flags) < 0) {
-      //kfree(mem);
-        freevm(d);
-        lcr3(V2P(pgdir));   // flush tlb
-        
+      //kfree(mem);        
         return 0;
     }
     increase_ref((void*)pa);
