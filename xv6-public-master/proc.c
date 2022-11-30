@@ -566,7 +566,6 @@ procdump(void)
   200 -> 500, n
 
 */
-  static char *writable_str[] = {"no","yes"};
   uint physical, writable = 0;
 
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
