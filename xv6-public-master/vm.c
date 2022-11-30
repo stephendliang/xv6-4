@@ -418,7 +418,6 @@ uva2ka(pde_t *pgdir, char *uva)
 // Copy len bytes from p to user address va in page table pgdir.
 // Most useful when pgdir is not the current page table.
 // uva2ka ensures this only works for PTE_U pages.
-/*
 int
 copyout(pde_t *pgdir, uint va, void *p, uint len)
 {
@@ -441,44 +440,7 @@ copyout(pde_t *pgdir, uint va, void *p, uint len)
   }
   return 0;
 }
-*/
 
-// Copy from kernel to user.
-// Copy len bytes from src to virtual address dstva in a given page table.
-// Return 0 on success, -1 on error.
-int
-copyout(pde_t *pgdir, uint va, void *p, uint len)
-{
-  uint64 n, va0, pa0;
-  while(len > 0){
-    va0 = PGROUNDDOWN(va);
-    if(va0 >= MAXVA) {
-      return -1;
-    }
-
-    pte_t *pte;
-    pte = walkpgdir(pgdir, (void*)va0, 0);
-    if (pte == 0) return -1;
-
-    if ((*pte & PTE_V) == 0) return -1;
-    if ((*pte & PTE_U) == 0) return -1;
-
-  if (*pte & PTE_RSW) {
-    pa0 = PTE2PA(*pte);
-    uint flags = PTE_FLAGS(*pte);
-    // +Write, -COW
-    flags |= PTE_W;
-    flags &= (~PTE_RSW);
-
-    char *mem = kalloc();
-    memmove(mem, (void*)pa0, PGSIZE);
-    uvmunmap(pagetable, va0, PGSIZE, 0);
-    decrease_ref((void*)pa0);
-    if (mappages(pagetable, va0, PGSIZE, (uint64)mem, flags) != 0) {
-      panic(“sometthing is wrong in mappages in trap.\n”);
-    }
-  }
-}
 
 //PAGEBREAK!
 // Blank page.
