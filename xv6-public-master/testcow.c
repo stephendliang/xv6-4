@@ -2,7 +2,6 @@
 #include "stat.h"
 #include "user.h"
 #include "x86.h"
-#include "defs.h"
 
 
 int main()
