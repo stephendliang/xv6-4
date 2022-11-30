@@ -384,7 +384,7 @@ copyuvm(pde_t *pgdir, uint sz)
         
         return 0;
     }
-    increase_ref(pa);
+    increase_ref((void*)pa);
   }
 
   lcr3(V2P(pgdir));
@@ -499,7 +499,7 @@ void pagefault(uint err_code)
         memmove(mem, (char*)P2V(pa), PGSIZE);
         *pte = V2P(mem) | PTE_P | PTE_U | PTE_W;
 
-        decrease_ref(pa);
+        decrease_ref((void*)pa);
     } else if(rfc == 1){
       *pte |= PTE_W;
     } else{
