@@ -373,6 +373,45 @@ copyuvm(pde_t *pgdir, uint sz)
       panic("copyuvm: page not present");
 
     *pte = (~ PTE_W) & *pte;  // read only parent page
+    pte |= PTE_S;
+
+    flags = PTE_FLAGS(*pte);
+    pa = PTE_ADDR(*pte);
+
+    if(mappages(d, (void*)i, PGSIZE, pa, flags) < 0) {
+      //kfree(mem);
+        freevm(d);
+        lcr3(V2P(pgdir));   // flush tlb
+        
+        return 0;
+    }
+    increase_ref((void*)pa);
+  }
+
+  lcr3(V2P(pgdir));
+  return d;
+}
+
+
+pde_t*
+cowuvm(pde_t *pgdir, uint sz)
+{
+  pde_t *d;
+  pte_t *pte;
+  uint pa, i, flags;
+  //char *mem;
+  
+  if((d = setupkvm()) == 0)
+    return 0;
+
+  for(i = 0; i < sz; i += PGSIZE){
+    if((pte = walkpgdir(pgdir, (void *) i, 0)) == 0)
+      panic("cowuvm: pte should exist");
+    if(!(*pte & PTE_P))
+      panic("cowuvm: page not present");
+
+    *pte &= (~ PTE_W);
+    *pte |= PTE_S;
 
     flags = PTE_FLAGS(*pte);
     pa = PTE_ADDR(*pte);
@@ -451,7 +490,7 @@ void pagefault(void)
 
     // 2- Check if the address found by rcr2() method is not 0.
     if (va == 0) {
-      panic("pagefault");
+      panic("pagefault: va == 0");
     }
 
     // 3- Find page table entry (PTE) —> hint: use walkpgdir method
