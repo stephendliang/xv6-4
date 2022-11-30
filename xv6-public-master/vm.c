@@ -23,9 +23,9 @@ void increase_ref(void* pa)
   if(phys >= PHYSTOP || phys < (uint)V2P(end))
     panic("incrementReferenceCount"); 
 
-  acquire(&kmem.lock);
-  kmem.refct[phys >> PTXSHIFT] += 1;
-  release(&kmem.lock);
+  acquire(&cow_lock.lock);
+  cow_lock.refct[phys >> PTXSHIFT] += 1;
+  release(&cow_lock.lock);
 }
 
 void decrease_ref(void* pa)
@@ -34,9 +34,9 @@ void decrease_ref(void* pa)
   if(phys >= PHYSTOP || phys < (uint)V2P(end))
     panic("decrementReferenceCount"); 
 
-  acquire(&kmem.lock);
-  kmem.refct[phys >> PTXSHIFT] -= 1;
-  release(&kmem.lock);
+  acquire(&cow_lock.lock);
+  cow_lock.refct[phys >> PTXSHIFT] -= 1;
+  release(&cow_lock.lock);
 }
 
 uint get_ref(void* pa)
@@ -47,9 +47,9 @@ uint get_ref(void* pa)
 
   uint count;
 
-  acquire(&kmem.lock);
-  count = kmem.refct[phys >> PTXSHIFT];
-  release(&kmem.lock);
+  acquire(&cow_lock.lock);
+  count = cow_lock.refct[phys >> PTXSHIFT];
+  release(&cow_lock.lock);
 
   return count;
 } 
