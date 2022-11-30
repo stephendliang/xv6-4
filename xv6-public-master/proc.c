@@ -587,7 +587,7 @@ procdump(void)
         cprintf(" %p", pc[i]);
     }
 
-    pte_t* entry = (pte_t*)P2V(PTE_ADDR(*p->pgdir))
+    pte_t* entry = (pte_t*)P2V(PTE_ADDR(*p->pgdir));
 
     for (i=0;i<NPTENTRIES;++i) {
 

@@ -7,15 +7,56 @@
 #include "proc.h"
 #include "elf.h"
 
-/*
 struct {
   struct spinlock lock;
   unsigned char refct[PHYSTOP >> PTXSHIFT];
 } cow_lock;
-*/
 
 extern char data[];  // defined by kernel.ld
 pde_t *kpgdir;  // for use in scheduler()
+
+
+
+void increase_ref(void* pa)
+{
+  uint phys = (uint)pa;
+  if(phys >= PHYSTOP || phys < (uint)V2P(end))
+    panic("incrementReferenceCount"); 
+
+  acquire(&kmem.lock);
+  kmem.refct[phys >> PTXSHIFT] += 1;
+  release(&kmem.lock);
+}
+
+void decrease_ref(void* pa)
+{
+  uint phys = (uint)pa;
+  if(phys >= PHYSTOP || phys < (uint)V2P(end))
+    panic("decrementReferenceCount"); 
+
+  acquire(&kmem.lock);
+  kmem.refct[phys >> PTXSHIFT] -= 1;
+  release(&kmem.lock);
+}
+
+uint get_ref(void* pa)
+{
+  uint phys = (uint)pa;
+  if(phys >= PHYSTOP || phys < (uint)V2P(end))
+    panic("getReferenceCount"); 
+
+  uint count;
+
+  acquire(&kmem.lock);
+  count = kmem.refct[phys >> PTXSHIFT];
+  release(&kmem.lock);
+
+  return count;
+} 
+
+
+
+
 
 // Set up CPU's kernel segment descriptors.
 // Run once on entry on each CPU.
@@ -432,7 +473,7 @@ copyout(pde_t *pgdir, uint va, void *p, uint len)
     char *mem = kalloc();
     memmove(mem, (void*)pa0, PGSIZE);
     uvmunmap(pagetable, va0, PGSIZE, 0);
-    dec_ref((void*)pa0);
+    decrease_ref((void*)pa0);
     if (mappages(pagetable, va0, PGSIZE, (uint64)mem, flags) != 0) {
       panic(“sometthing is wrong in mappages in trap.\n”);
     }
@@ -459,25 +500,25 @@ void pagefault(uint err_code)
     }
 
     // 3- Find page table entry (PTE) —> hint: use walkpgdir method
-    if(va >= KERNBASE || (pte = walkpgdir(proc->pgdir, (void*)va, 0)) == 0){
+    if(va >= KERNBASE || (pte = walkpgdir(myproc()->pgdir, (void*)va, 0)) == 0){
       cprintf("Illegal virtual address on cpu %d addr 0x%x, kill proc %s with pid %d\n",
-              cpu->apicid, va, proc->name, proc->pid);
+              cpu->apicid, va, myproc()->name, myproc()->pid);
       // mark the process as killed
-      proc->killed = 1;
+      myproc()->killed = 1;
       return;
     }
 
     // 4-If pte is not shared —> give panic error
     if (!(*pte & PTE_S)) {
       panic("pagefault");
-      proc->killed = 1;
+      myproc()->killed = 1;
       return;
     }
 
     // 5-If pte is not present —> give panic error
     if (!(*pte & PTE_P) || !(*pte & PTE_U)) {
       panic("pagefault");
-      proc->killed = 1;
+      myproc()->killed = 1;
       return;
     }
 
@@ -486,20 +527,18 @@ void pagefault(uint err_code)
       panic("Page fault already writeable");
     }
 
-
     // 6-Find physical address(pa) and 20-bit physical page number (ppn)
     // get the physical address from the  given page table entry
     pa = PTE_ADDR(*pte);
     // get the reference count of the current page
-    rfc = get_refC(pa);
+    rfc = get_ref(pa);
     char *mem;
-
 
     //7- Check if the table is shared or not
     if(rfc > 1) {
         if((mem = kalloc()) == 0) {
-          cprintf("Page fault out of memory, kill proc %s with pid %d\n", proc->name, proc->pid);
-          proc->killed = 1;
+          cprintf("Page fault out of memory, kill proc %s with pid %d\n", myproc()->name, myproc()->pid);
+          myproc()->killed = 1;
           return;
         }
 
