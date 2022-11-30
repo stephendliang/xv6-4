@@ -48,7 +48,7 @@ trap(struct trapframe *tf)
 
   switch(tf->trapno){
   case T_PGFLT:
-    if((tf->cs&3) != 0) { pagefault(tf->err); }
+    if((tf->cs&3) != 0) { pagefault(); }
     break;
     
 

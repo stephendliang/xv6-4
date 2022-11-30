@@ -443,7 +443,7 @@ copyout(pde_t *pgdir, uint va, void *p, uint len)
 // Blank page.
 // COW trap handling
 
-void pagefault(uint err_code)
+void pagefault(void)
 {
     // 1- Get cr2 address
     uint va = rcr2(), pa = 0, rfc = 0;
@@ -477,7 +477,6 @@ void pagefault(uint err_code)
     }
 
     if(*pte & PTE_W) {
-      cprintf("error code: %x, addr 0x%x\n", err_code, va);
       panic("Page fault already writeable");
     }
 
