@@ -595,9 +595,9 @@ procdump(void)
         writable = entry[i] & PTE_W;
 
         if (writable == 1)
-          cprintf("\n%p -> %p, yes", i, physical);
+          cprintf("\n%d -> %d, yes", i, physical);
         else
-          cprintf("\n%p -> %p, no", i, physical);
+          cprintf("\n%d -> %d, no", i, physical);
       }
     }
 
