@@ -417,13 +417,17 @@ cowuvm(pde_t *pgdir, uint sz)
 
     if(mappages(d, (void*)i, PGSIZE, pa, flags) < 0) {
       //kfree(mem);        
-        return 0;
+      goto bad;
     }
     increase_ref((void*)pa);
   }
 
   lcr3(V2P(pgdir));
   return d;
+
+  bad:
+  freeuvm(d);
+  return 0;
 }
 
 
