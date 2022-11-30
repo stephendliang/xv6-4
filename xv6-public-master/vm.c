@@ -485,7 +485,7 @@ void pagefault(uint err_code)
     // get the physical address from the  given page table entry
     pa = PTE_ADDR(*pte);
     // get the reference count of the current page
-    rfc = get_ref(pa);
+    rfc = get_ref((void*)pa);
     char *mem;
 
     //7- Check if the table is shared or not
