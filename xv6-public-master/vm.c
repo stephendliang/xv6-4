@@ -509,7 +509,7 @@ void pagefault(void)
 
     // 3- Find page table entry (PTE) —> hint: use walkpgdir method
     if(va >= KERNBASE || (pte = walkpgdir(myproc()->pgdir, (void*)va, 0)) == 0){
-      panic("pagefault");
+      panic("pagefault : walkfail");
       // mark the process as killed
       myproc()->killed = 1;
       return;
@@ -517,20 +517,16 @@ void pagefault(void)
 
     // 4-If pte is not shared —> give panic error
     if (!(*pte & PTE_S)) {
-      panic("pagefault");
+      panic("pagefault : not shared");
       myproc()->killed = 1;
       return;
     }
 
     // 5-If pte is not present —> give panic error
-    if (!(*pte & PTE_P) || !(*pte & PTE_U)) {
-      panic("pagefault");
+    if (!(*pte & PTE_P)) {
+      panic("pagefault : not present");
       myproc()->killed = 1;
       return;
-    }
-
-    if(*pte & PTE_W) {
-      panic("Page fault already writeable");
     }
 
     // 6-Find physical address(pa) and 20-bit physical page number (ppn)
