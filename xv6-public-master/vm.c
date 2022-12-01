@@ -317,12 +317,11 @@ deallocuvm(pde_t *pgdir, uint oldsz, uint newsz)
       *pte = 0;
     }
 
-    int rc = get_ref(pa);
+    int rc = get_ref((void*)pa);
 
     if (rc == 0) {
       panic("deallocuvm");
     } else if (rc == 1) {
-      freevm(d);
     } else {
       decrease_ref((void*)pa);
     }
