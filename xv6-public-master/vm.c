@@ -298,7 +298,7 @@ int
 deallocuvm(pde_t *pgdir, uint oldsz, uint newsz)
 {
   pte_t *pte;
-  uint a, pa;
+  uint a, pa = 0;
 
   if(newsz >= oldsz)
     return oldsz;
