@@ -522,7 +522,7 @@ if(get_ref((void*)pa) == 0) {
   // if so,
     // Set PTE flag as Writeable and Not Shared
     *pte |= PTE_W;
-    *pte &= ~PTE_SH;
+    *pte &= ~PTE_S;
   } else {
   // else if the table is shared
     // allocate physical memory for the page
@@ -535,7 +535,7 @@ if(get_ref((void*)pa) == 0) {
     *pte |= PTE_W;
     *pte |= PTE_U;
     *pte |= PTE_P;
-    *pte &= ~PTE_SH;
+    *pte &= ~PTE_S;
     
     acquire(&cow_count.lock);
     // Decrement counter at index Physical Address of mem / Pagesize
@@ -550,7 +550,7 @@ if(get_ref((void*)pa) == 0) {
       pte_t *parent_pte = walkpgdir(curproc->parent->pgdir, (void*)addr, 1);
       // Set parent's PTE flag as Writeable and Not Shared
       *parent_pte |= PTE_W;
-      *parent_pte &= ~PTE_SH;
+      *parent_pte &= ~PTE_S;
     }
   }
     /*
