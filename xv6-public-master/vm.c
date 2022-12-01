@@ -305,6 +305,8 @@ deallocuvm(pde_t *pgdir, uint oldsz, uint newsz)
   a = PGROUNDUP(newsz);
   for(; a  < oldsz; a += PGSIZE){
     pte = walkpgdir(pgdir, (char*)a, 0);
+      
+
     if(!pte)
       a = PGADDR(PDX(a) + 1, 0, 0) - PGSIZE;
     else if((*pte & PTE_P) != 0){
@@ -312,23 +314,21 @@ deallocuvm(pde_t *pgdir, uint oldsz, uint newsz)
       if(pa == 0)
         panic("kfree");
       char *v = P2V(pa);
-      kfree(v);
-      *pte = 0;
-    }
-
-    int rc = get_ref((void*)pa);
-
-    if (rc == 0) {
-      kfree(v);
-      *pte = 0;
-    } else {
-      decrease_ref((void*)pa);
-      if (get_ref((void*)pa) == 0) {
-        pde_t* parent_pte = walkpgdir(myproc()->parent->pgdir, (void *) a, 1);
-        *parent_pte = *parent_pte |  PTE_W;
-        *parent_pte = *parent_pte &  ~PTE_SH;
+      int rc = get_ref((void*)pa);
+        
+      if (rc == 0) {
+        kfree(v);
+        *pte = 0;
+      } else {
+        decrease_ref((void*)pa);
+        if (get_ref((void*)pa) == 0) {
+          pde_t* parent_pte = walkpgdir(myproc()->parent->pgdir, (void *) a, 1);
+          *parent_pte = *parent_pte |  PTE_W;
+          *parent_pte = *parent_pte &  ~PTE_S;
+        }
       }
     }
+
   }
   return newsz;
 }
