@@ -536,15 +536,11 @@ if(get_ref((void*)pa) == 0) {
     *pte |= PTE_U;
     *pte |= PTE_P;
     *pte &= ~PTE_S;
-    
-    acquire(&cow_count.lock);
-    // Decrement counter at index Physical Address of mem / Pagesize
-    cow_count.counters[pa / PGSIZE]--;
-    // Release lock
-    release(&cow_count.lock);
+
+    decrease_ref((void*)pa);
 
     // Check one more time if the cow count now becomes 0
-    if(cow_count.counters[pa / PGSIZE] == 0) {
+    if(get_ref((void*)pa) == 0) {
       // Find parent's pte using walkpgdir
       // Input: current process's parent pgdir, address that causes pgfault, 1
       pte_t *parent_pte = walkpgdir(curproc->parent->pgdir, (void*)addr, 1);
