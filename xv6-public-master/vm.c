@@ -324,7 +324,7 @@ deallocuvm(pde_t *pgdir, uint oldsz, uint newsz)
     } else if (rc == 1) {
       freevm(d);
     } else {
-      decrease_ref(pa);
+      decrease_ref((void*)pa);
     }
   }
   return newsz;
