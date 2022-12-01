@@ -285,7 +285,6 @@ allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
       kfree(mem);
       return 0;
     }
-    cow_lock.refct[V2P(mem)] = 0;
   }
   return newsz;
 }
