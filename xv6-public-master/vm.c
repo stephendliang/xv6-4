@@ -493,7 +493,6 @@ void pagefault(void)
 {
 
   char* mem;
-  uint addr;
     // 1- Get cr2 address
     uint va = rcr2(), pa = 0;
     pte_t *pte;
@@ -546,7 +545,7 @@ if(get_ref((void*)pa) == 0) {
     if(get_ref((void*)pa) == 0) {
       // Find parent's pte using walkpgdir
       // Input: current process's parent pgdir, address that causes pgfault, 1
-      pte_t *parent_pte = walkpgdir(myproc()->parent->pgdir, (void*)addr, 1);
+      pte_t *parent_pte = walkpgdir(myproc()->parent->pgdir, (void*)va, 1);
       // Set parent's PTE flag as Writeable and Not Shared
       *parent_pte |= PTE_W;
       *parent_pte &= ~PTE_S;
