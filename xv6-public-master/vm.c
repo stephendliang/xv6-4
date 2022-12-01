@@ -285,6 +285,7 @@ allocuvm(pde_t *pgdir, uint oldsz, uint newsz)
       kfree(mem);
       return 0;
     }
+    cow_lock.refct[V2P(mem)] = 0;
   }
   return newsz;
 }
@@ -314,6 +315,16 @@ deallocuvm(pde_t *pgdir, uint oldsz, uint newsz)
       char *v = P2V(pa);
       kfree(v);
       *pte = 0;
+    }
+
+    int rc = get_ref(pa);
+
+    if (rc == 0) {
+      panic("deallocuvm");
+    } else if (rc == 1) {
+      freevm(d);
+    } else {
+      decrease_ref(pa);
     }
   }
   return newsz;

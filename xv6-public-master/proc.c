@@ -557,15 +557,7 @@ procdump(void)
   struct proc *p;
   char *state;
   uint pc[10];
-  /*
-  1 sleep init 80104907 80104647 8010600a 80105216 801063d9 801061dd
-  1 -> 300, y
-  200 -> 500, n
-  2 sleep sh 80104907 80100966 80101d9e 8010113d 80105425 80105216 801063d9
-  1 -> 306, y
-  200 -> 500, n
-
-*/
+  
   uint physical, writable = 0;
 
   for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
