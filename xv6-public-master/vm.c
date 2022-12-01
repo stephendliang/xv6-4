@@ -491,8 +491,11 @@ copyout(pde_t *pgdir, uint va, void *p, uint len)
 
 void pagefault(void)
 {
+
+  char* mem;
+  uint addr;
     // 1- Get cr2 address
-    uint va = rcr2(), pa = 0, rfc = 0;
+    uint va = rcr2(), pa = 0;
     pte_t *pte;
 
     // 2- Check if the address found by rcr2() method is not 0.
@@ -543,7 +546,7 @@ if(get_ref((void*)pa) == 0) {
     if(get_ref((void*)pa) == 0) {
       // Find parent's pte using walkpgdir
       // Input: current process's parent pgdir, address that causes pgfault, 1
-      pte_t *parent_pte = walkpgdir(curproc->parent->pgdir, (void*)addr, 1);
+      pte_t *parent_pte = walkpgdir(myproc()->parent->pgdir, (void*)addr, 1);
       // Set parent's PTE flag as Writeable and Not Shared
       *parent_pte |= PTE_W;
       *parent_pte &= ~PTE_S;
