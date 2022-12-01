@@ -37,14 +37,7 @@ void decrease_ref(void* pa)
 uint get_ref(void* pa)
 {
   uint phys = (uint)pa;
-
-  uint count;
-
-  acquire(&cow_lock.lock);
-  count = cow_lock.refct[phys >> PTXSHIFT];
-  release(&cow_lock.lock);
-
-  return count;
+  return cow_lock.refct[phys >> PTXSHIFT];
 } 
 
 
@@ -510,28 +503,57 @@ void pagefault(void)
     // 3- Find page table entry (PTE) —> hint: use walkpgdir method
     if(va >= KERNBASE || (pte = walkpgdir(myproc()->pgdir, (void*)va, 0)) == 0){
       panic("pagefault : walkfail");
-      // mark the process as killed
-      myproc()->killed = 1;
-      return;
     }
 
     // 4-If pte is not shared —> give panic error
     if (!(*pte & PTE_S)) {
       panic("pagefault : not shared");
-      myproc()->killed = 1;
-      return;
     }
 
     // 5-If pte is not present —> give panic error
     if (!(*pte & PTE_P)) {
       panic("pagefault : not present");
-      myproc()->killed = 1;
-      return;
     }
 
     // 6-Find physical address(pa) and 20-bit physical page number (ppn)
     // get the physical address from the  given page table entry
     pa = PTE_ADDR(*pte);
+if(get_ref((void*)pa) == 0) {
+  // if so,
+    // Set PTE flag as Writeable and Not Shared
+    *pte |= PTE_W;
+    *pte &= ~PTE_SH;
+  } else {
+  // else if the table is shared
+    // allocate physical memory for the page
+    mem = kalloc();
+    // copy content from physical address to newly allocated
+    memmove(mem, (char*)P2V(pa), PGSIZE);
+    // update the pte to the point to the physical address of the newly allocated
+    *pte = V2P(mem);
+    // Set pte flag as Writable, User, Present, and Not Shared
+    *pte |= PTE_W;
+    *pte |= PTE_U;
+    *pte |= PTE_P;
+    *pte &= ~PTE_SH;
+    
+    acquire(&cow_count.lock);
+    // Decrement counter at index Physical Address of mem / Pagesize
+    cow_count.counters[pa / PGSIZE]--;
+    // Release lock
+    release(&cow_count.lock);
+
+    // Check one more time if the cow count now becomes 0
+    if(cow_count.counters[pa / PGSIZE] == 0) {
+      // Find parent's pte using walkpgdir
+      // Input: current process's parent pgdir, address that causes pgfault, 1
+      pte_t *parent_pte = walkpgdir(curproc->parent->pgdir, (void*)addr, 1);
+      // Set parent's PTE flag as Writeable and Not Shared
+      *parent_pte |= PTE_W;
+      *parent_pte &= ~PTE_SH;
+    }
+  }
+    /*
     // get the reference count of the current page
     rfc = get_ref((void*)pa);
     char *mem;
@@ -554,6 +576,7 @@ void pagefault(void)
       panic("pagefault reference count wrong\n");
     }
 
-    // Flush TLB for process since page table entries changed
+    // Flush TLB for process since page table entries changed*/
+
     lcr3(V2P(myproc()->pgdir));
 }
