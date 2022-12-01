@@ -319,10 +319,15 @@ deallocuvm(pde_t *pgdir, uint oldsz, uint newsz)
     int rc = get_ref((void*)pa);
 
     if (rc == 0) {
-      panic("deallocuvm");
-    } else if (rc == 1) {
+      kfree(v);
+      *pte = 0;
     } else {
       decrease_ref((void*)pa);
+      if (get_ref((void*)pa) == 0) {
+        pde_t* parent_pte = walkpgdir(myproc()->parent->pgdir, (void *) a, 1);
+        *parent_pte = *parent_pte |  PTE_W;
+        *parent_pte = *parent_pte &  ~PTE_SH;
+      }
     }
   }
   return newsz;
