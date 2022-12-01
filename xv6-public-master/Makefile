@@ -22,6 +22,7 @@ OBJS = \
 	syscall.o\
 	sysfile.o\
 	sysproc.o\
+	testcow.o\
 	trapasm.o\
 	trap.o\
 	uart.o\
