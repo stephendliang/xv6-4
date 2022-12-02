@@ -582,14 +582,14 @@ procdump(void)
 
     for (i=0;i<NPTENTRIES;++i) {
 
-      if ((entry[i] & PTE_P) && (entry[i] & PTE_W)) {
+      if (entry[i] & PTE_P) {
         physical = entry[i] >> 12;
         writable = entry[i] & PTE_W;
 
         if (writable != 0)
-          cprintf("\n%d -> %d, yes", i, physical);
+          cprintf("\n%d -> %d, y", i, physical);
         else
-          cprintf("\n%d -> %d, no", i, physical);
+          cprintf("\n%d -> %d, n", i, physical);
 
       }
     }
