@@ -582,7 +582,7 @@ procdump(void)
 
     for (i=0;i<NPTENTRIES;++i) {
 
-      if (entry[i] & PTE_P) {
+      if ((entry[i] & PTE_P) && (entry[i] & PTE_U)) {
         physical = entry[i] >> 12;
         writable = entry[i] & PTE_W;
 
